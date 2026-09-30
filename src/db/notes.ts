@@ -1,6 +1,15 @@
 import { nanoid } from 'nanoid'
+import { addImageAsset, pruneAssets } from './assets'
 import { db } from './db'
 import type { Note } from './schema'
+
+/**
+ * Notes created in this session, with the state they were created in. Leaving one that is still
+ * exactly like that discards it (see `discardIfUntouched`), so "New note" followed by clicking
+ * somewhere else doesn't leave an empty "Untitled" behind. Session-only on purpose: a note from an
+ * earlier session is never removed automatically.
+ */
+const freshNotes = new Map<string, { folderId: string | null; order: number }>()
 
 export async function createNote(folderId: string | null = null): Promise<string> {
   const now = Date.now()
@@ -18,7 +27,36 @@ export async function createNote(folderId: string | null = null): Promise<string
     updatedAt: now,
   }
   await db.notes.add(note)
+  freshNotes.set(note.id, { folderId, order: note.order })
   return note.id
+}
+
+/**
+ * Deletes a note created in this session if the user left it exactly as it was created: no title, no
+ * content, never edited, not pinned/favorited/moved, and not used on any board. Anything the user did
+ * to it (even typing and deleting again) means it is kept. Only gets one chance per note.
+ */
+export async function discardIfUntouched(id: string) {
+  const created = freshNotes.get(id)
+  if (!created) return
+  freshNotes.delete(id)
+  await db.transaction('rw', db.notes, db.boards, async () => {
+    const note = await db.notes.get(id)
+    if (!note) return
+    const untouched =
+      note.title === '' &&
+      note.content.length === 0 &&
+      note.updatedAt === note.createdAt &&
+      note.folderId === created.folderId &&
+      note.order === created.order &&
+      !note.favorite &&
+      !note.pinned &&
+      note.tags.length === 0 &&
+      !note.cover
+    if (!untouched) return
+    const usedOnBoard = (await db.boards.toArray()).some((b) => b.nodes.some((n) => n.type === 'note' && n.noteId === id))
+    if (!usedOnBoard) await db.notes.delete(id)
+  })
 }
 
 export function updateNote(id: string, changes: Partial<Pick<Note, 'title' | 'content'>>) {
@@ -45,7 +83,36 @@ export async function togglePinned(id: string) {
 }
 
 export function deleteNote(id: string) {
-  return db.notes.delete(id)
+  return deleteNotes([id])
+}
+
+/** Deletes notes, their cards on every board and their cover images. */
+export async function deleteNotes(ids: string[]) {
+  await db.transaction('rw', db.notes, db.boards, db.assets, async () => {
+    const gone = new Set(ids)
+    const covers = (await db.notes.bulkGet(ids)).map((n) => n?.cover?.assetId)
+    await db.notes.bulkDelete(ids)
+    for (const board of await db.boards.toArray()) {
+      const nodes = board.nodes.filter((n) => !(n.type === 'note' && gone.has(n.noteId)))
+      if (nodes.length !== board.nodes.length) await db.boards.update(board.id, { nodes, updatedAt: Date.now() })
+    }
+    await pruneAssets(covers)
+  })
+}
+
+/** Sets (or replaces) the cover image of a note. Counts as an edit. */
+export async function setNoteCover(id: string, file: File) {
+  const asset = await addImageAsset(file)
+  const old = (await db.notes.get(id))?.cover?.assetId
+  await db.notes.update(id, { cover: { assetId: asset.id }, updatedAt: Date.now() })
+  // If the note was deleted meanwhile, the new image has no user and is removed again
+  await pruneAssets([old, asset.id])
+}
+
+export async function removeNoteCover(id: string) {
+  const old = (await db.notes.get(id))?.cover?.assetId
+  await db.notes.update(id, { cover: undefined, updatedAt: Date.now() })
+  await pruneAssets([old])
 }
 
 /** Pinned notes first, then most recently edited. */

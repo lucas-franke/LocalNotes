@@ -5,6 +5,7 @@ import '@blocknote/shadcn/style.css'
 import { useTheme } from 'next-themes'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { updateNote } from '@/db/notes'
+import { AddCoverButton, CoverBanner } from './CoverBanner'
 import type { Note, StoredBlock } from '@/db/schema'
 
 const SAVE_DELAY = 400
@@ -55,10 +56,15 @@ function useDebouncedSave(noteId: string) {
   return { save, isPending }
 }
 
-/** Mount with `key={note.id}`: the editor is initialised once per note. */
-export function NoteEditor({ note }: { note: Note }) {
+/**
+ * Mount with `key={note.id}`: the editor is initialised once per note.
+ * `embedded` is the compact variant used inside a board card: smaller title, tight padding and no
+ * block side menu (the card is small), with the cursor placed at the end of the note.
+ */
+export function NoteEditor({ note, embedded = false }: { note: Note; embedded?: boolean }) {
   const { resolvedTheme } = useTheme()
   const [title, setTitle] = useState(note.title)
+  const [startedUntitled] = useState(!note.title)
   const { save, isPending } = useDebouncedSave(note.id)
 
   // Pick up renames made elsewhere (e.g. the sidebar), unless a local edit is still unsaved
@@ -73,28 +79,44 @@ export function NoteEditor({ note }: { note: Note }) {
     domAttributes: { editor: { 'aria-label': 'Note content' } },
   })
 
+  // In a card, start typing right away: cursor at the end (an untitled note starts in its title field instead)
+  useEffect(() => {
+    if (!embedded || startedUntitled) return
+    editor.setTextCursorPosition(editor.document[editor.document.length - 1], 'end')
+    editor.focus()
+  }, [embedded, startedUntitled, editor])
+
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pt-10 pb-32 sm:px-12">
-      <input
-        value={title}
-        onChange={(e) => {
-          setTitle(e.target.value)
-          save({ title: e.target.value })
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === 'ArrowDown') {
-            e.preventDefault()
-            editor.setTextCursorPosition(editor.document[0], 'start')
-            editor.focus()
+    <div className={embedded ? 'bn-embedded w-full pt-2 pb-4' : 'mx-auto w-full max-w-3xl px-4 pt-10 pb-32 sm:px-12'}>
+      {!embedded && <CoverBanner note={note} />}
+      <div className="group/title relative">
+        {!embedded && <AddCoverButton note={note} />}
+        <input
+          value={title}
+          onChange={(e) => {
+            setTitle(e.target.value)
+            save({ title: e.target.value })
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === 'ArrowDown') {
+              e.preventDefault()
+              editor.setTextCursorPosition(editor.document[0], 'start')
+              editor.focus()
+            }
+          }}
+          placeholder="Untitled"
+          aria-label="Note title"
+          autoFocus={!note.title}
+          className={
+            embedded
+              ? 'mb-1 w-full bg-transparent px-3 text-lg font-semibold tracking-tight outline-none placeholder:text-muted-foreground'
+              : 'mb-4 w-full bg-transparent px-[54px] text-4xl font-bold tracking-tight outline-none placeholder:text-muted-foreground'
           }
-        }}
-        placeholder="Untitled"
-        aria-label="Note title"
-        autoFocus={!note.title}
-        className="mb-4 w-full bg-transparent px-[54px] text-4xl font-bold tracking-tight outline-none placeholder:text-muted-foreground"
-      />
+        />
+      </div>
       <BlockNoteView
         editor={editor}
+        sideMenu={!embedded}
         theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
         onChange={() => save({ content: editor.document as unknown as StoredBlock[] })}
       />

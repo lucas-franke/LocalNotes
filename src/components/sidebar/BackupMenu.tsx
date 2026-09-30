@@ -74,7 +74,7 @@ export function BackupMenu({ hasNotes }: { hasNotes: boolean }) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <p className="px-2 py-1.5 text-xs leading-relaxed text-muted-foreground">
-            Notes are stored only in this browser. Export regularly to keep a copy.
+            Notes, boards and images are stored only in this browser. Export regularly to keep a copy.
           </p>
         </DropdownMenuContent>
       </DropdownMenu>

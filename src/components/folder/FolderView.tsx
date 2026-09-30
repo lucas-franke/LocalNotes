@@ -16,17 +16,19 @@ import { RenameInput } from '@/components/sidebar/RenameInput'
 import { Button } from '@/components/ui/button'
 import { db } from '@/db/db'
 import { createFolder, renameFolder } from '@/db/folders'
-import { createNote, notePreview, noteTitle, noteWordCount, renameNote, sortNotesBy } from '@/db/notes'
-import type { Folder, Note } from '@/db/schema'
+import { createNote, noteTitle, renameNote, sortNotesBy } from '@/db/notes'
+import type { Folder, Note, NoteCardView } from '@/db/schema'
 import { useFolderMenuEntries, useNoteMenuEntries } from '@/hooks/useItemMenus'
+import { CardViewToggle } from '@/components/note/CardViewToggle'
+import { NoteCardBody } from '@/components/note/NoteCardBody'
+import { CardMeta } from '@/components/note/NoteCardMeta'
+import { useNoteCardView } from '@/hooks/useNoteCardView'
 import { useNoteSort } from '@/hooks/useNoteSort'
 import { openFolder, openNote } from '@/hooks/useRoute'
 import { sortFolders } from '@/lib/folder-tree'
-import { formatDate, formatDateTime, formatRelative } from '@/lib/format'
+import { formatDate, formatDateTime, plural } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { SortMenu } from './SortMenu'
-
-const plural = (n: number, word: string) => `${n.toLocaleString('en')} ${word}${n === 1 ? '' : 's'}`
 
 /** A folder opened as a page: its subfolders and notes as preview cards. */
 export function FolderView({ folder }: { folder: Folder }) {
@@ -35,6 +37,7 @@ export function FolderView({ folder }: { folder: Folder }) {
 
   const subfolders = sortFolders(folders.filter((f) => f.parentId === folder.id))
   const [sort, setSort] = useNoteSort()
+  const [cardView, setCardView] = useNoteCardView()
   const folderNotes = sortNotesBy(
     notes.filter((n) => n.folderId === folder.id),
     sort.key,
@@ -76,15 +79,22 @@ export function FolderView({ folder }: { folder: Folder }) {
       {subfolders.length > 0 && (
         <CardSection title="Folders">
           {subfolders.map((sub) => (
-            <FolderCard key={sub.id} folder={sub} {...counts(sub.id)} />
+            <FolderCard key={sub.id} folder={sub} view={cardView} {...counts(sub.id)} />
           ))}
         </CardSection>
       )}
 
       {folderNotes.length > 0 && (
-        <CardSection title="Notes" action={<SortMenu sort={sort} onChange={setSort} />}>
+        <CardSection title="Notes" 
+          action={
+            <div className="flex items-center gap-2">
+              <CardViewToggle value={cardView} onChange={setCardView} label="Card view" />
+              <SortMenu sort={sort} onChange={setSort} />
+            </div>
+          }
+        >
           {folderNotes.map((note) => (
-            <NoteCard key={note.id} note={note} />
+            <NoteCard key={note.id} note={note} view={cardView} />
           ))}
         </CardSection>
       )}
@@ -92,10 +102,9 @@ export function FolderView({ folder }: { folder: Folder }) {
   )
 }
 
-function NoteCard({ note }: { note: Note }) {
+function NoteCard({ note, view }: { note: Note; view: NoteCardView }) {
   const [renaming, setRenaming] = useState(false)
   const entries = useNoteMenuEntries(note, { onRename: () => setRenaming(true) })
-  const preview = notePreview(note)
 
   return (
     <CardShell
@@ -118,26 +127,24 @@ function NoteCard({ note }: { note: Note }) {
           {note.pinned && <Pin className="size-3.5 shrink-0 text-muted-foreground" aria-label="Pinned" />}
         </>
       }
-      className="h-44"
+      className={view === 'full' ? 'min-h-44' : undefined}
     >
-      <p className="line-clamp-3 flex-1 text-sm text-muted-foreground">
-        {preview || <span className="italic">Empty note</span>}
-      </p>
-      <CardMeta
-        primary={
-          <>
-            <span title={formatDateTime(note.updatedAt)}>Edited {formatRelative(note.updatedAt)}</span>
-            {' · '}
-            {plural(noteWordCount(note), 'word')}
-          </>
-        }
-        created={note.createdAt}
-      />
+      <NoteCardBody note={note} view={view} />
     </CardShell>
   )
 }
 
-function FolderCard({ folder, notes, folders }: { folder: Folder; notes: number; folders: number }) {
+function FolderCard({
+  folder,
+  notes,
+  folders,
+  view,
+}: {
+  folder: Folder
+  notes: number
+  folders: number
+  view: NoteCardView
+}) {
   const [renaming, setRenaming] = useState(false)
   const entries = useFolderMenuEntries(folder, { onRename: () => setRenaming(true) })
 
@@ -157,26 +164,20 @@ function FolderCard({ folder, notes, folders }: { folder: Folder; notes: number;
         }
       }
     >
-      <CardMeta
-        primary={
-          <>
-            {plural(notes, 'note')}
-            {folders > 0 && ` · ${plural(folders, 'folder')}`}
-          </>
-        }
-        created={folder.createdAt}
-      />
+      {view !== 'title' && (
+        <div className="flex flex-1 flex-col px-4 pt-1 pb-3">
+          <CardMeta
+            primary={
+              <>
+                {plural(notes, 'note')}
+                {folders > 0 && ` · ${plural(folders, 'folder')}`}
+              </>
+            }
+            created={folder.createdAt}
+          />
+        </div>
+      )}
     </CardShell>
-  )
-}
-
-/** Two fixed lines so every card's footer lines up. */
-function CardMeta({ primary, created }: { primary: ReactNode; created: number }) {
-  return (
-    <div className="mt-auto space-y-0.5 text-xs text-muted-foreground">
-      <p className="truncate">{primary}</p>
-      <p title={formatDateTime(created)}>Created {formatDate(created)}</p>
-    </div>
   )
 }
 
@@ -207,11 +208,11 @@ function CardShell({
     <RowContextMenu entries={entries}>
       <div
         className={cn(
-          'group/card relative flex min-w-0 flex-col gap-2 rounded-lg border bg-card p-4 transition-colors hover:border-ring/60 hover:bg-accent/40 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring/60',
+          'group/card relative flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card transition-colors hover:border-ring/60 hover:bg-accent/40 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring/60',
           className,
         )}
       >
-        <div className="flex h-7 items-center gap-2 pr-8">
+        <div className="flex h-11 shrink-0 items-center gap-2 pr-12 pl-4">
           <Icon className="size-4 shrink-0 text-muted-foreground" />
           {rename ? (
             <RenameInput initial={rename.initial} onDone={rename.onDone} />
@@ -226,7 +227,7 @@ function CardShell({
           {badges}
         </div>
         {children}
-        <div className="absolute top-3 right-3 z-10 hidden group-focus-within/card:flex group-hover/card:flex pointer-coarse:flex has-data-[state=open]:flex">
+        <div className="absolute top-2 right-2 z-10 hidden rounded-md bg-card/80 backdrop-blur-sm group-focus-within/card:flex group-hover/card:flex pointer-coarse:flex has-data-[state=open]:flex">
           <RowDropdownMenu
             align="end"
             entries={entries}

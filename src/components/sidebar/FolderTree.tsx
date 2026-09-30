@@ -2,17 +2,18 @@ import { ChevronRight, Folder as FolderIcon, FolderOpen, MoreHorizontal, Plus } 
 import { RowContextMenu, RowDropdownMenu } from '@/components/ItemMenu'
 import { Button } from '@/components/ui/button'
 import { renameFolder } from '@/db/folders'
-import { createNote, sortNotesManual } from '@/db/notes'
+import { createNote } from '@/db/notes'
 import type { Folder } from '@/db/schema'
 import { useFolderMenuEntries } from '@/hooks/useItemMenus'
 import { openNote } from '@/hooks/useRoute'
 import { sortFolders } from '@/lib/folder-tree'
+import { canReorderFolder } from '@/lib/reorder'
 import { cn } from '@/lib/utils'
 import { NoteItem } from './NoteItem'
 import { RenameInput } from './RenameInput'
 import { rowActionsClass, rowClass, rowLinkClass } from './row-styles'
 import { useSidebar } from './sidebar-context'
-import { DropLine } from './TreeDnd'
+import { DropLine } from './DropLine'
 import { dndId, useTreeItem } from './tree-dnd'
 
 export function FolderTree({ parentId = null, depth = 0 }: { parentId?: string | null; depth?: number }) {
@@ -26,7 +27,7 @@ function FolderItem({ folder, depth }: { folder: Folder; depth: number }) {
     useSidebar()
   const open = expanded.has(folder.id)
   const active = folder.id === activeFolderId
-  const notes = sortNotesManual(notesByFolder.get(folder.id) ?? [])
+  const notes = notesByFolder.get(folder.id) ?? []
   const hasChildren = notes.length > 0 || folders.some((f) => f.parentId === folder.id)
   const expand = () => toggleExpanded(folder.id, true)
 
@@ -36,12 +37,12 @@ function FolderItem({ folder, depth }: { folder: Folder; depth: number }) {
     // In the sidebar a new subfolder is named inline right away
     onNewSubfolder: (id) => setRenamingId(id),
     onMoved: (parentId) => parentId && toggleExpanded(parentId, true),
-    reorder: true,
+    reorder: canReorderFolder(folders, folder),
   })
   const { setNodeRef, listeners, isDragging, indicator } = useTreeItem(
     dndId('folder', folder.id),
     { type: 'folder', folder, expanded: open, hasChildren },
-    { disabled: renamingId === folder.id },
+    { dragDisabled: renamingId === folder.id, dropDisabled: renamingId === folder.id },
   )
   const indentLeft = `${0.25 + depth * 0.75}rem`
 

@@ -25,3 +25,6 @@ export function formatDate(time: number) {
 export function formatDateTime(time: number) {
   return new Date(time).toLocaleString()
 }
+
+/** "1 note", "3 notes" */
+export const plural = (n: number, word: string) => `${n.toLocaleString('en')} ${word}${n === 1 ? '' : 's'}`

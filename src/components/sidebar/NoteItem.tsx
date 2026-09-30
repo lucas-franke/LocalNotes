@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button'
 import { noteTitle, renameNote } from '@/db/notes'
 import type { Note } from '@/db/schema'
 import { useNoteMenuEntries } from '@/hooks/useItemMenus'
+import { canReorderNote } from '@/lib/reorder'
 import { cn } from '@/lib/utils'
 import { RenameInput } from './RenameInput'
 import { rowActionsClass, rowClass, rowLinkClass, rowStatusClass } from './row-styles'
 import { useSidebar } from './sidebar-context'
-import { DropLine } from './TreeDnd'
+import { DropLine } from './DropLine'
 import { dndId, useTreeItem } from './tree-dnd'
 
 export function NoteItem({
@@ -23,7 +24,7 @@ export function NoteItem({
   /** Which list the row is in; a note can appear in several (e.g. Favorites and its folder) */
   section?: string
 }) {
-  const { activeNoteId, toggleExpanded, renamingId, setRenamingId } = useSidebar()
+  const { activeNoteId, notesByFolder, toggleExpanded, renamingId, setRenamingId } = useSidebar()
   const active = note.id === activeNoteId
   const renameKey = `${section}:${note.id}`
   const renaming = renamingId === renameKey
@@ -31,17 +32,19 @@ export function NoteItem({
   const entries = useNoteMenuEntries(note, {
     onRename: () => setRenamingId(renameKey),
     onMoved: (folderId) => folderId && toggleExpanded(folderId, true),
-    reorder: section === 'tree',
+    // Only rows in the folder tree / "Notes" list have a manual order to move within
+    reorder: section === 'tree' ? canReorderNote(notesByFolder.get(note.folderId) ?? [], note) : undefined,
   })
   // Inside the tree, line the icon up with sibling folder icons (which sit after a 1.75rem chevron)
   const indentLeft = depth === 0 ? '0.5rem' : `${2 + depth * 0.75}rem`
   const indent = { paddingLeft: indentLeft }
 
-  // Only rows in the folder tree / "Notes" list can be dragged; Favorites and search are other orders
+  // Every row can be dragged (e.g. onto a board), but only rows in the folder tree / "Notes" list are
+  // targets for reordering; Favorites and search results show a different order.
   const { setNodeRef, listeners, isDragging, indicator } = useTreeItem(
     section === 'tree' ? dndId('note', note.id) : `${section}:${note.id}`,
     { type: 'note', note },
-    { disabled: section !== 'tree' || renaming },
+    { dragDisabled: renaming, dropDisabled: section !== 'tree' || renaming },
   )
 
   return (

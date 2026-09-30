@@ -7,15 +7,17 @@ import { Tip } from '@/components/Tip'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { db } from '@/db/db'
+import { createBoard, sortBoards } from '@/db/boards'
 import { createFolder } from '@/db/folders'
 import { createNote, noteText, sortNotes, sortNotesManual } from '@/db/notes'
-import type { Folder, Note } from '@/db/schema'
-import { openNote, useActiveFolderId, useActiveNoteId } from '@/hooks/useRoute'
+import type { Board, Folder, Note } from '@/db/schema'
+import { openBoard, openNote, useActiveBoardId, useActiveFolderId, useActiveNoteId } from '@/hooks/useRoute'
+import { useRegisterSidebarDnd } from '@/components/dnd/dnd-registry'
 import { BackupMenu } from './BackupMenu'
+import { BoardItem } from './BoardItem'
 import { FolderTree } from './FolderTree'
 import { NoteItem } from './NoteItem'
 import { SidebarContext, type SidebarContextValue } from './sidebar-context'
-import { TreeDnd } from './TreeDnd'
 import { dndId, useDropIndicator } from './tree-dnd'
 import { cn } from '@/lib/utils'
 
@@ -41,8 +43,10 @@ export function Sidebar({
   const folders = useLiveQuery(() => db.folders.toArray(), [], NOT_LOADED)
   const foldersLoaded = folders !== NOT_LOADED
   const notes = useLiveQuery(() => db.notes.toArray(), [], [] as Note[])
+  const boards = useLiveQuery(() => db.boards.toArray(), [], [] as Board[])
   const activeNoteId = useActiveNoteId()
   const activeFolderId = useActiveFolderId()
+  const activeBoardId = useActiveBoardId()
 
   const [query, setQuery] = useState('')
   const [expanded, setExpanded] = useState(loadExpanded)
@@ -95,11 +99,16 @@ export function Sidebar({
       document.querySelector('aside [data-active="true"]')?.scrollIntoView({ block: 'nearest' }),
     )
     return () => cancelAnimationFrame(frame)
-  }, [revealFolderId, activeNoteId, foldersLoaded, expandPath])
+  }, [revealFolderId, activeNoteId, activeBoardId, foldersLoaded, expandPath])
+
+  // Tell the app-level drag layer how to plan and commit drops on the sidebar
+  useRegisterSidebarDnd({ folders, notes, onExpand: (id) => toggleExpanded(id, true) })
 
   const notesByFolder = useMemo(() => {
     const map = new Map<string | null, Note[]>()
     for (const note of notes) map.set(note.folderId, [...(map.get(note.folderId) ?? []), note])
+    // Every list in display order (pinned first, then the manual order): rows read their neighbours from it
+    for (const [folderId, list] of map) map.set(folderId, sortNotesManual(list))
     return map
   }, [notes])
 
@@ -108,6 +117,7 @@ export function Sidebar({
     notesByFolder,
     activeNoteId,
     activeFolderId,
+    activeBoardId,
     expanded,
     toggleExpanded,
     renamingId,
@@ -117,7 +127,7 @@ export function Sidebar({
   const q = query.trim().toLowerCase()
   const results = q ? sortNotes(notes.filter((n) => noteText(n).toLowerCase().includes(q))) : []
   const favorites = sortNotes(notes.filter((n) => n.favorite))
-  const unfiled = sortNotesManual(notesByFolder.get(null) ?? [])
+  const unfiled = notesByFolder.get(null) ?? []
   const folderName = (id: string | null) => folders.find((f) => f.id === id)?.name
 
   return (
@@ -186,7 +196,7 @@ export function Sidebar({
                 ))}
               </Section>
             ) : (
-              <TreeDnd folders={folders} notes={notes} onExpand={(id) => toggleExpanded(id, true)}>
+              <>
                 {favorites.length > 0 && (
                   <Section title="Favorites">
                     {favorites.map((note) => (
@@ -212,6 +222,27 @@ export function Sidebar({
                 >
                   {folders.length ? <FolderTree /> : <EmptyHint>No folders yet</EmptyHint>}
                 </Section>
+                <Section
+                  title="Boards"
+                  action={
+                    <Tip label="New board">
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={async () => openBoard(await createBoard())}
+                        aria-label="New board"
+                      >
+                        <Plus />
+                      </Button>
+                    </Tip>
+                  }
+                >
+                  {boards.length ? (
+                    sortBoards(boards).map((board) => <BoardItem key={board.id} board={board} />)
+                  ) : (
+                    <EmptyHint>No boards yet</EmptyHint>
+                  )}
+                </Section>
                 <Section title="Notes" drop="notes">
                   {unfiled.length ? (
                     unfiled.map((note) => <NoteItem key={note.id} note={note} />)
@@ -219,7 +250,7 @@ export function Sidebar({
                     <EmptyHint>No notes outside folders</EmptyHint>
                   )}
                 </Section>
-              </TreeDnd>
+              </>
             )}
           </nav>
         </ScrollArea>

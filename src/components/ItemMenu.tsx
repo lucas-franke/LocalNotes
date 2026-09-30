@@ -43,8 +43,24 @@ const parts = {
   },
 }
 
-function Entries({ entries, kind }: { entries: MenuEntry[]; kind: keyof typeof parts }) {
+/**
+ * Drops what would be useless or look odd when entries are left out conditionally: submenus with
+ * nothing in them, and separators at the start, at the end or twice in a row.
+ */
+function tidyEntries(entries: MenuEntry[]): MenuEntry[] {
+  const out: MenuEntry[] = []
+  for (const entry of entries) {
+    if (entry.type === 'sub' && tidyEntries(entry.entries).length === 0) continue
+    if (entry.type === 'separator' && (out.length === 0 || out[out.length - 1].type === 'separator')) continue
+    out.push(entry)
+  }
+  while (out.length && out[out.length - 1].type === 'separator') out.pop()
+  return out
+}
+
+function Entries({ entries: rawEntries, kind }: { entries: MenuEntry[]; kind: keyof typeof parts }) {
   const P = parts[kind]
+  const entries = tidyEntries(rawEntries)
   return entries.map((entry, i) => {
     if (entry.type === 'separator') return <P.Separator key={i} />
     if (entry.type === 'sub') {

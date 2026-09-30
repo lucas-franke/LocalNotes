@@ -63,7 +63,8 @@
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.205 0 0);
     --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
+    /* 0.5 (was 0.556): muted text on the hover / open highlight (--accent) needs at least 4.5:1 */
+    --muted-foreground: oklch(0.5 0 0);
     --accent: oklch(0.97 0 0);
     --accent-foreground: oklch(0.205 0 0);
     --destructive: oklch(0.577 0.245 27.325);
@@ -153,4 +154,31 @@
 }
 .bn-root.bn-shadcn [data-content-type='heading'][data-level='3'] {
   --level: 1.25em;
+}
+
+/* Boards (React Flow): follow the shadcn theme in light and dark. The extra `html` raises specificity
+   above React Flow's own stylesheet, which is loaded later together with the board chunk. */
+html .react-flow,
+html .react-flow.dark,
+html .react-flow.light {
+  --xy-background-color-default: var(--background);
+  --xy-background-pattern-dots-color-default: var(--border);
+  --xy-controls-button-background-color-default: var(--card);
+  --xy-controls-button-background-color-hover-default: var(--accent);
+  --xy-controls-button-color-default: var(--foreground);
+  --xy-controls-button-color-hover-default: var(--accent-foreground);
+  --xy-controls-button-border-color-default: var(--border);
+  --xy-attribution-background-color-default: transparent;
+  --xy-resize-background-color-default: var(--ring);
+  --xy-selection-background-color-default: color-mix(in oklch, var(--ring) 10%, transparent);
+  --xy-selection-border-default: 1px solid var(--ring);
+}
+
+html .react-flow__attribution a {
+  color: var(--muted-foreground);
+}
+
+/* The note editor inside a board card: no room for BlockNote's 54px page margins */
+.bn-embedded .bn-editor {
+  padding-inline: 12px;
 }

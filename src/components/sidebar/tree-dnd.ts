@@ -13,6 +13,7 @@ export type DndData =
   | { type: 'note'; note: Note }
   | { type: 'folder'; folder: Folder; expanded: boolean; hasChildren: boolean }
   | { type: 'section'; section: 'folders' | 'notes' }
+  | { type: 'canvas' } // the open board: notes dropped here become cards
 
 /** Where the dragged item would land, plus which element shows the indicator. */
 export interface DropPlan {
@@ -40,6 +41,9 @@ export function planDrop(
     sortNotesManual(notes.filter((n) => n.folderId === folderId && n.id !== except))
   const foldersIn = (parentId: string | null, except?: string) =>
     sortFolders(folders.filter((f) => f.parentId === parentId && f.id !== except))
+
+  // The canvas is handled by the board, not by the sidebar's ordering rules
+  if (over.type === 'canvas') return null
 
   if (active.type === 'note') {
     const id = active.note.id
@@ -112,9 +116,13 @@ export function useDropIndicator(id: string): DropPosition | null {
 }
 
 /** Makes a sidebar row both draggable and a drop target. */
-export function useTreeItem(id: string, data: DndData, { disabled = false } = {}) {
-  const drag = useDraggable({ id, data, disabled })
-  const drop = useDroppable({ id, data, disabled })
+export function useTreeItem(
+  id: string,
+  data: DndData,
+  { dragDisabled = false, dropDisabled = false }: { dragDisabled?: boolean; dropDisabled?: boolean } = {},
+) {
+  const drag = useDraggable({ id, data, disabled: dragDisabled })
+  const drop = useDroppable({ id, data, disabled: dropDisabled })
   return {
     setNodeRef: (el: HTMLElement | null) => {
       drag.setNodeRef(el)

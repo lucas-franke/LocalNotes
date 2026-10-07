@@ -16,6 +16,7 @@ This Project and its content are written by Claude Code.
 - Drag and drop in the sidebar to reorder notes and folders or move them into other folders (or use **Move up / down** in the row menu)
 - **Boards**: an infinite canvas per topic (pan and zoom) with note cards, text annotations and images
   - Add items with the round **+** button (centered while a board is empty, bottom-right otherwise): pick an existing note, add text, or add images (file picker, paste with `Ctrl+V`, or drop files onto the canvas)
+  - Zoom slider (with zoom out/in, the current level as a reset-to-100% button, and fit-all) and **Find on board** (search the cards and texts on the board by title or content and jump to the match)
   - Drag a note from the sidebar onto the board to add it as a card at that spot
   - Cards are live views of your notes (renaming or editing a note updates every board); moving, resizing and deleting items is saved automatically; removing a card never deletes the note
   - Double-click a card (or use its pencil button) to edit the note right there, with the full editor and slash commands; one card is edited at a time, `Escape` or the check button finishes
@@ -23,7 +24,7 @@ This Project and its content are written by Claude Code.
 - Full-text search across titles and note content
 - Backup: export everything (notes, folders, boards and their images, including note covers) as `localnotes-YYYY-MM-DD.json`; import with **Merge** (the more recently edited note or board wins) or **Replace**
 - Light/dark mode
-- Right-click (or the `…` button) on a note, folder or board for all actions
+- Right-click (or the `…` button) on a note, folder or board for all actions, including **Duplicate** (a note, or a folder with all its subfolders and notes)
 
 Shortcuts: `Ctrl+Alt+N` new note · `Ctrl+K` search · `Ctrl+\` toggle sidebar
 

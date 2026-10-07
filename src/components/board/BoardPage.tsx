@@ -2,7 +2,6 @@ import '@xyflow/react/dist/style.css'
 import { useDroppable } from '@dnd-kit/core'
 import {
   Background,
-  Controls,
   Panel,
   ReactFlow,
   ReactFlowProvider,
@@ -26,6 +25,8 @@ import type { Board, BoardNode, Note, NoteCardView } from '@/db/schema'
 import { cn } from '@/lib/utils'
 import { BoardContext, type Box } from './board-context'
 import { BoardFab } from './BoardFab'
+import { NodeSearch } from './NodeSearch'
+import { ZoomSlider } from './ZoomSlider'
 import { TITLE_HEIGHT, DEFAULT_CARD_HEIGHT, toBoardNode, toFlowNode, withCardView, type BoardFlowNode } from './flow'
 import { ImageNode } from './nodes/ImageNode'
 import { NoteNode } from './nodes/NoteNode'
@@ -199,13 +200,21 @@ function Canvas({ board }: { board: Board }) {
     [commit],
   )
 
+  /** Selects an item (only it) and zooms to it, also when it is far outside the view. */
+  const focusNode = useCallback(
+    (id: string) => {
+      setNodes((ns) => ns.map((n) => ({ ...n, selected: n.id === id })))
+      void rf.fitView({ nodes: [{ id }], duration: 300, padding: 0.4, maxZoom: 1 })
+    },
+    [rf],
+  )
+
   const addNote = useCallback(
     (noteId: string, at?: XYPosition) => {
       const existing = nodesRef.current.find((n) => n.data.type === 'note' && n.data.noteId === noteId)
       if (existing) {
         // One card per note per board: show the one that is already there
-        setNodes((ns) => ns.map((n) => ({ ...n, selected: n.id === existing.id })))
-        void rf.fitView({ nodes: [{ id: existing.id }], duration: 300, padding: 0.4, maxZoom: 1 })
+        focusNode(existing.id)
         return
       }
       const collapsed = noteView === 'title'
@@ -220,7 +229,7 @@ function Canvas({ board }: { board: Board }) {
         ...size,
       })
     },
-    [addNode, place, rf, noteView],
+    [addNode, place, focusNode, noteView],
   )
 
   const addText = useCallback(
@@ -372,7 +381,8 @@ function Canvas({ board }: { board: Board }) {
           attributionPosition="bottom-left"
         >
           <Background gap={20} size={1} />
-          <Controls showInteractive={false} />
+          <ZoomSlider />
+          {nodes.length > 0 && <NodeSearch nodes={nodes} notes={notes} onFind={focusNode} />}
           <Panel position="top-right">
             <CardViewToggle value={noteView} onChange={setAllCardViews} label="View of all note cards" />
           </Panel>

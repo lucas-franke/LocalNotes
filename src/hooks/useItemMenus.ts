@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import {
   ArrowDown,
   ArrowUp,
+  Copy,
   ExternalLink,
   FolderInput,
   FolderOpen,
@@ -14,9 +15,11 @@ import {
   StarOff,
   Trash2,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import type { MenuEntry } from '@/components/ItemMenu'
 import { db } from '@/db/db'
 import { boardTitle, deleteBoard } from '@/db/boards'
+import { duplicateFolder, duplicateNote } from '@/db/duplicate'
 import { createFolder, deleteFolder, descendantIds, moveFolder } from '@/db/folders'
 import { createNote, deleteNote, moveNote, noteTitle, toggleFavorite, togglePinned } from '@/db/notes'
 import { shiftFolder, shiftNote } from '@/db/order'
@@ -98,6 +101,14 @@ export function useNoteMenuEntries(
       icon: note.pinned ? PinOff : Pin,
       onSelect: () => togglePinned(note.id),
     },
+    {
+      type: 'item',
+      label: 'Duplicate',
+      icon: Copy,
+      onSelect: async () => {
+        if (await duplicateNote(note.id)) toast.success(`Duplicated "${noteTitle(note)}"`)
+      },
+    },
     ...moveToEntries(folders, note.folderId, (folderId) => {
       void moveNote(note.id, folderId)
       onMoved?.(folderId)
@@ -172,6 +183,14 @@ export function useFolderMenuEntries(
     },
     { type: 'separator' },
     { type: 'item', label: 'Rename', icon: Pencil, onSelect: onRename },
+    {
+      type: 'item',
+      label: 'Duplicate',
+      icon: Copy,
+      onSelect: async () => {
+        if (await duplicateFolder(folder.id)) toast.success(`Duplicated folder "${folder.name}" with its contents`)
+      },
+    },
     ...moveToEntries(
       folders,
       folder.parentId,

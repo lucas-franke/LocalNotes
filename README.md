@@ -1,6 +1,7 @@
 # LocalNotes
 
 A minimalist, Notion-like note-taking app that runs entirely in the browser. There is no server: notes and boards are stored in the browser's IndexedDB and can be exported/imported as a JSON project file.
+([Try it out](https://lucas-franke.github.io/LocalNotes/))
 
 ## Disclaimer
 
@@ -9,7 +10,7 @@ This Project and its content are written by Claude Code.
 ## Features
 
 - Block editor ([BlockNote](https://www.blocknotejs.org/)) with slash commands (`/`) for headings, lists, checklists, quotes, code, tables, images and more, plus markdown shortcuts (`#`, `-`, `[]`, …)
-- Cover images: add a header image to a note (**Add cover** above the title; change it, remove it, or drop an image on the banner). Note cards show it too
+- Covers: every note gets a colored gradient from a fixed palette by default (a note always keeps the same one). Click the cover to pick another gradient, upload an image (or drop an image file on it), or remove it; **Add cover** brings it back. Note cards show the cover too
 - Card views (**Full** / **Cover** / **Title**): the folder view has one switch for all cards; on a board every card has its own view (card menu) and the toolbar in the top-right corner sets all of them at once (new cards start in that view)
 - Nested folders, favorites, pinned notes (pinned notes stay at the top of their list)
 - Drag and drop in the sidebar to reorder notes and folders or move them into other folders (or use **Move up / down** in the row menu)

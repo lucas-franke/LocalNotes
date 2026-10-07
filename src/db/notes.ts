@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid'
 import { addImageAsset, pruneAssets } from './assets'
 import { db } from './db'
-import type { Note } from './schema'
+import { coverAssetId, type Note } from './schema'
 
 /**
  * Notes created in this session, with the state they were created in. Leaving one that is still
@@ -52,7 +52,7 @@ export async function discardIfUntouched(id: string) {
       !note.favorite &&
       !note.pinned &&
       note.tags.length === 0 &&
-      !note.cover
+      note.cover === undefined
     if (!untouched) return
     const usedOnBoard = (await db.boards.toArray()).some((b) => b.nodes.some((n) => n.type === 'note' && n.noteId === id))
     if (!usedOnBoard) await db.notes.delete(id)
@@ -90,7 +90,7 @@ export function deleteNote(id: string) {
 export async function deleteNotes(ids: string[]) {
   await db.transaction('rw', db.notes, db.boards, db.assets, async () => {
     const gone = new Set(ids)
-    const covers = (await db.notes.bulkGet(ids)).map((n) => n?.cover?.assetId)
+    const covers = (await db.notes.bulkGet(ids)).map((n) => coverAssetId(n))
     await db.notes.bulkDelete(ids)
     for (const board of await db.boards.toArray()) {
       const nodes = board.nodes.filter((n) => !(n.type === 'note' && gone.has(n.noteId)))
@@ -103,15 +103,23 @@ export async function deleteNotes(ids: string[]) {
 /** Sets (or replaces) the cover image of a note. Counts as an edit. */
 export async function setNoteCover(id: string, file: File) {
   const asset = await addImageAsset(file)
-  const old = (await db.notes.get(id))?.cover?.assetId
+  const old = coverAssetId(await db.notes.get(id))
   await db.notes.update(id, { cover: { assetId: asset.id }, updatedAt: Date.now() })
   // If the note was deleted meanwhile, the new image has no user and is removed again
   await pruneAssets([old, asset.id])
 }
 
+/** Picks a gradient from the palette as the cover (replacing an image). */
+export async function setNoteGradient(id: string, gradient: string) {
+  const old = coverAssetId(await db.notes.get(id))
+  await db.notes.update(id, { cover: { gradient }, updatedAt: Date.now() })
+  await pruneAssets([old])
+}
+
+/** No cover at all (not even a generated gradient). */
 export async function removeNoteCover(id: string) {
-  const old = (await db.notes.get(id))?.cover?.assetId
-  await db.notes.update(id, { cover: undefined, updatedAt: Date.now() })
+  const old = coverAssetId(await db.notes.get(id))
+  await db.notes.update(id, { cover: null, updatedAt: Date.now() })
   await pruneAssets([old])
 }
 

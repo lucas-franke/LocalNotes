@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid'
 import { db } from './db'
-import type { Asset } from './schema'
+import { coverAssetId, type Asset } from './schema'
 
 /** Larger images are scaled down on import to keep the database and exports reasonable. */
 const MAX_SIDE = 2048
@@ -83,7 +83,8 @@ export async function pruneAssets(assetIds: Iterable<string | undefined>) {
       for (const n of board.nodes) if (n.type === 'image') candidates.delete(n.assetId)
     }
     await db.notes.each((note) => {
-      if (note.cover) candidates.delete(note.cover.assetId)
+      const id = coverAssetId(note)
+      if (id) candidates.delete(id)
     })
     await db.assets.bulkDelete([...candidates])
   })

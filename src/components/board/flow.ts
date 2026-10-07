@@ -24,7 +24,7 @@ export function toBoardNode(n: BoardFlowNode): BoardNode {
 /** Height of a note card in the 'title' view: just its header (40px) plus the border */
 export const TITLE_HEIGHT = 42
 /** Height a collapsed card gets back when it has no remembered one */
-export const DEFAULT_CARD_HEIGHT = 200
+export const DEFAULT_CARD_HEIGHT = 240
 
 export function cardView(n: BoardNode): NoteCardView {
   return n.type === 'note' ? (n.view ?? 'full') : 'full'

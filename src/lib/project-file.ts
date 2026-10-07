@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { db } from '@/db/db'
-import type { Asset, Board, Folder, Note } from '@/db/schema'
+import { coverAssetId, type Asset, type Board, type Folder, type Note } from '@/db/schema'
 
 // Version 2 adds boards and the images they use; version 3 adds note covers and card views.
 // Older files still import.
@@ -26,7 +26,7 @@ const noteSchema = z.object({
   favorite: z.boolean(),
   pinned: z.boolean(),
   tags: z.array(z.string()).default([]),
-  cover: z.object({ assetId: z.string() }).optional(),
+  cover: z.union([z.object({ assetId: z.string() }), z.object({ gradient: z.string() })]).nullable().optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 })
@@ -107,7 +107,7 @@ function base64ToBlob(data: string, type: string): Blob {
 
 const boardImageIds = (boards: Board[]) =>
   boards.flatMap((b) => b.nodes.flatMap((n) => (n.type === 'image' ? [n.assetId] : [])))
-const coverIds = (notes: Note[]) => notes.flatMap((n) => (n.cover ? [n.cover.assetId] : []))
+const coverIds = (notes: Note[]) => notes.flatMap((n) => coverAssetId(n) ?? [])
 
 export async function exportProject() {
   const [folders, notes, boards] = await Promise.all([db.folders.toArray(), db.notes.toArray(), db.boards.toArray()])

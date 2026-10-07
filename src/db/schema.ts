@@ -9,6 +9,12 @@ export interface Folder {
   createdAt: number
 }
 
+export type NoteCoverValue = { assetId: string } | { gradient: string }
+
+/** The image asset a cover uses, if it is an image. */
+export const coverAssetId = (note: { cover?: NoteCoverValue | null } | undefined) =>
+  note?.cover && 'assetId' in note.cover ? note.cover.assetId : undefined
+
 export interface Note {
   id: string
   title: string
@@ -21,8 +27,11 @@ export interface Note {
   pinned: boolean
   /** Reserved for auto-tagging rules (not used in the UI yet) */
   tags: string[]
-  /** Optional header image (stored in the assets table) */
-  cover?: { assetId: string }
+  /**
+   * Header: an image (in the assets table) or a gradient from the palette. Missing = a generated
+   * gradient is shown; null = the user removed the cover.
+   */
+  cover?: NoteCoverValue | null
   createdAt: number
   updatedAt: number
 }

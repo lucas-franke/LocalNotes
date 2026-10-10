@@ -122,7 +122,7 @@ export async function exportProject() {
   const url = URL.createObjectURL(file)
   const a = document.createElement('a')
   a.href = url
-  a.download = `localnotes-${new Date(now).toISOString().slice(0, 10)}.json`
+  a.download = `lodoc-${new Date(now).toISOString().slice(0, 10)}.json`
   a.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
   try {
@@ -151,13 +151,13 @@ export async function readProjectFile(file: File): Promise<ProjectFile> {
   }
   const header = json as { app?: unknown; version?: unknown } | null
   if (header?.app === 'localnotes' && typeof header.version === 'number' && header.version > FORMAT_VERSION) {
-    throw new Error('This file was created by a newer version of LocalNotes. Update the app to open it.')
+    throw new Error('This file was created by a newer version of Lodoc. Update the app to open it.')
   }
   const result = projectSchema.safeParse(json)
   if (!result.success) {
     const issue = result.error.issues[0]
     const where = issue?.path.length ? ` (at ${issue.path.join('.')})` : ''
-    throw new Error(`This is not a valid LocalNotes project file${where}.`)
+    throw new Error(`This is not a valid Lodoc project file${where}.`)
   }
   const { folders, notes, boards, assets, exportedAt } = result.data
   let restored: Asset[]

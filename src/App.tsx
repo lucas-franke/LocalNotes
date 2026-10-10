@@ -5,6 +5,7 @@ import { BoardBreadcrumb } from '@/components/board/BoardBreadcrumb'
 import { Breadcrumbs } from '@/components/Breadcrumbs'
 import { AppDnd } from '@/components/dnd/AppDnd'
 import { FolderView } from '@/components/folder/FolderView'
+import { HomeView } from '@/components/home/HomeView'
 import { Sidebar } from '@/components/sidebar/Sidebar'
 import { Tip } from '@/components/Tip'
 import { Button } from '@/components/ui/button'
@@ -113,7 +114,7 @@ export default function App() {
                 ? current.folder.name
                 : current?.type === 'board'
                   ? boardTitle(current.board)
-                  : 'LocalNotes'}
+                  : 'Lodoc'}
           </h1>
           <header className="flex h-12 shrink-0 items-center gap-1 px-3 text-sm">
             {!sidebarOpen && (
@@ -144,8 +145,11 @@ export default function App() {
               <Suspense fallback={null}>
                 <BoardPage key={current.board.id} board={current.board} />
               </Suspense>
+            ) : route ? (
+              <EmptyState missing={route.type} />
             ) : (
-              <EmptyState missing={route?.type ?? null} />
+              // No page open: an overview once there is content, the welcome message before that
+              <HomeView empty={<EmptyState missing={null} />} />
             )}
           </div>
         </main>

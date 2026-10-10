@@ -102,7 +102,7 @@ export function FolderView({ folder }: { folder: Folder }) {
   )
 }
 
-function NoteCard({ note, view }: { note: Note; view: NoteCardView }) {
+export function NoteCard({ note, view }: { note: Note; view: NoteCardView }) {
   const [renaming, setRenaming] = useState(false)
   const entries = useNoteMenuEntries(note, { onRename: () => setRenaming(true) })
 
@@ -134,7 +134,7 @@ function NoteCard({ note, view }: { note: Note; view: NoteCardView }) {
   )
 }
 
-function FolderCard({
+export function FolderCard({
   folder,
   notes,
   folders,
@@ -185,7 +185,7 @@ function FolderCard({
  * A card whose title link stretches over the whole card (`after:inset-0`), so the card is one
  * big click target while the "…" button can sit on top of it without nesting interactive elements.
  */
-function CardShell({
+export function CardShell({
   href,
   icon: Icon,
   title,
@@ -243,7 +243,7 @@ function CardShell({
   )
 }
 
-function CardSection({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+export function CardSection({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
     <section className="mt-10">
       <div className="mb-3 flex h-9 items-center justify-between">

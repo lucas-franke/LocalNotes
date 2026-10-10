@@ -17,6 +17,8 @@ import { BackupMenu } from './BackupMenu'
 import { BoardItem } from './BoardItem'
 import { FolderTree } from './FolderTree'
 import { NoteItem } from './NoteItem'
+import { useSidebarWidth } from '@/hooks/useSidebarWidth'
+import { SidebarResizer } from './SidebarResizer'
 import { SidebarContext, type SidebarContextValue } from './sidebar-context'
 import { dndId, useDropIndicator } from './tree-dnd'
 import { cn } from '@/lib/utils'
@@ -112,6 +114,8 @@ export function Sidebar({
     return map
   }, [notes])
 
+  const sidebarWidth = useSidebarWidth()
+
   const ctx: SidebarContextValue = {
     folders,
     notesByFolder,
@@ -132,9 +136,20 @@ export function Sidebar({
 
   return (
     <SidebarContext.Provider value={ctx}>
-      <aside className="flex h-full w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground">
+      <aside
+        // w-64 on a small screen (overlay); the chosen width from md up
+        className="relative flex h-full w-64 shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground md:w-(--sidebar-width)"
+        style={{ '--sidebar-width': `${sidebarWidth.width}px` } as React.CSSProperties}
+      >
         <div className="flex items-center gap-1 py-2 pr-2 pl-4">
-          <span className="flex-1 text-sm font-semibold tracking-tight">LocalNotes</span>
+          {/* The logo is the link to the overview */}
+          <a
+            href="#/"
+            title="Overview"
+            className="flex-1 rounded-md px-1 py-1.5 text-sm font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+          >
+            Lodoc
+          </a>
           <ThemeToggle />
           <Tip label="Hide sidebar" shortcut="Ctrl \">
             <Button variant="ghost" size="icon-sm" onClick={onCollapse} aria-label="Hide sidebar">
@@ -187,7 +202,8 @@ export function Sidebar({
           </Button>
         </div>
 
-        <ScrollArea className="min-h-0 flex-1">
+        {/* Radix lays the content out as a table that grows with its widest row; make it a plain block so long names are cut off (truncate) and the buttons stay in view */}
+        <ScrollArea className="min-h-0 flex-1 [&>[data-slot=scroll-area-viewport]>div]:block!">
           <nav aria-label="Notes and folders" className="px-2 pb-4">
             {q ? (
               <Section title={`${results.length} result${results.length === 1 ? '' : 's'}`}>
@@ -258,6 +274,7 @@ export function Sidebar({
         <div className="border-t p-2">
           <BackupMenu hasNotes={notes.length > 0} />
         </div>
+        <SidebarResizer width={sidebarWidth.width} onResize={sidebarWidth.setWidth} onCommit={sidebarWidth.save} />
       </aside>
     </SidebarContext.Provider>
   )

@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Asset, Board, Folder, Note } from './schema'
 
+// The database keeps its original name (from before the app was called Lodoc), or existing notes would vanish
 export const db = new Dexie('localnotes') as Dexie & {
   notes: EntityTable<Note, 'id'>
   folders: EntityTable<Folder, 'id'>

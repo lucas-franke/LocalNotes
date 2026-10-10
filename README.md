@@ -1,7 +1,8 @@
 # Lodoc
 
 A minimalist, Notion-like note-taking app that runs entirely in the browser. There is no server: notes and boards are stored in the browser's IndexedDB and can be exported/imported as a JSON project file.
-([Try it out](https://lucas-franke.github.io/LocalNotes/))
+
+[Try it out on lodoc.app](https://lodoc.app/)
 
 ## Disclaimer
 
